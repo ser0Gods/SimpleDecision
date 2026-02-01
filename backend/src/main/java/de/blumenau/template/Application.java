@@ -1,4 +1,4 @@
-package de.blumenau.weddinghomepage;
+package de.blumenau.template;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
