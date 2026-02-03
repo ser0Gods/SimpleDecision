@@ -37,6 +37,18 @@ public class GraphController {
         return ResponseEntity.ok(dto);
     }
 
+    @GetMapping("/processes")
+    @Operation(summary = "List processes", description = "Returns the list of available processes (root questions)")
+    public ResponseEntity<List<QuestionDTO>> processes() {
+        return ResponseEntity.ok(graphService.listProcesses());
+    }
+
+    @PostMapping("/process/{rootId}/start")
+    @Operation(summary = "Start process", description = "Resets the session and starts the selected process (root question)")
+    public ResponseEntity<QuestionDTO> start(@PathVariable long rootId, HttpSession session) {
+        return ResponseEntity.ok(graphService.startProcess(rootId, session));
+    }
+
     @GetMapping("/history")
     @Operation(summary = "Get answer history", description = "Returns the list of answers selected in order for the current session")
     public ResponseEntity<List<AnswerDTO>> history(HttpSession session) {

@@ -49,7 +49,9 @@ H2 console is available at: http://localhost:8080/h2-console
 - OpenAPI YAML: http://localhost:8080/v3/api-docs.yaml
 
 ## API (used by the frontend)
-- GET `/api/graph/current` → current question with answers
+- GET `/api/graph/processes` → list of available processes (root questions)
+- POST `/api/graph/process/{rootId}/start` → start the selected process; returns its first question
+- GET `/api/graph/current` → current question with answers (auto-starts if only one process exists)
 - POST `/api/graph/answer/{answerId}` → select an answer; returns next question or null if end
 - GET `/api/graph/history` → list of selected answers for the current session (persisted)
 - POST `/api/graph/reset` → reset current session (clears persisted answers for this session)

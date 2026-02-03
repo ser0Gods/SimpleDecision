@@ -4,10 +4,13 @@ import api from '@/lib/api'
 
 type AnswerDTO = { id: number, text: string }
 type QuestionDTO = { id: number, text: string, answers: AnswerDTO[] }
+type ProcessDTO = { id: number, text: string }
 
 const loading = ref(false)
 const current = ref<QuestionDTO | null>(null)
 const history = reactive<AnswerDTO[]>([])
+const processes = reactive<ProcessDTO[]>([])
+const selectingProcess = ref(false)
 
 async function loadCurrent() {
   loading.value = true
@@ -39,11 +42,42 @@ async function reset() {
   await api.post('api/graph/reset')
   await loadHistory()
   await loadCurrent()
+  if (!current.value) {
+    await loadProcessesAndMaybeStart()
+  }
+}
+
+async function loadProcessesAndMaybeStart() {
+  const res = await api.get('api/graph/processes')
+  processes.splice(0, processes.length, ...res.data)
+  if (processes.length === 1) {
+    // auto start the only process
+    await startProcess(processes[0].id)
+  } else if (processes.length > 1) {
+    selectingProcess.value = true
+    current.value = null
+  }
+}
+
+async function startProcess(processId: number) {
+  selectingProcess.value = false
+  loading.value = true
+  try {
+    const res = await api.post(`api/graph/process/${processId}/start`)
+    current.value = res.data
+    await loadHistory()
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(async () => {
   await loadHistory()
+  // load current question; if null, let processes decide
   await loadCurrent()
+  if (!current.value) {
+    await loadProcessesAndMaybeStart()
+  }
 })
 </script>
 
@@ -51,6 +85,13 @@ onMounted(async () => {
   <main>
     <h1>Decision Graph</h1>
     <div v-if="loading">Loading...</div>
+    <!-- Process selection view (process = root question) -->
+    <div v-if="selectingProcess">
+      <h2>Select a process</h2>
+      <div class="answers">
+        <button v-for="p in processes" :key="p.id" class="answer" @click="startProcess(p.id)">{{ p.text }}</button>
+      </div>
+    </div>
     <div v-if="current">
       <h2>{{ current.text }}</h2>
       <div class="answers">
@@ -58,7 +99,7 @@ onMounted(async () => {
       </div>
     </div>
     <div v-else>
-      <p>No further questions. You reached the end of the graph.</p>
+      <p v-if="!selectingProcess">No further questions. You reached the end of the process.</p>
     </div>
 
     <div class="history">

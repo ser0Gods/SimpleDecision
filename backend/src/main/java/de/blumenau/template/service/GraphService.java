@@ -37,14 +37,19 @@ public class GraphService {
     public QuestionDTO getCurrentQuestion(HttpSession session) {
         Long currentId = (Long) session.getAttribute(SESSION_KEY_CURRENT_Q);
         if (currentId == null) {
-            // find root question
-            Optional<Question> rootOpt = questionRepository.findAll().stream().filter(Question::isRoot).findFirst();
-            if (!rootOpt.isPresent()) {
-                return null;
+            // determine root questions (processes)
+            List<Question> roots = questionRepository.findByRootTrue();
+            if (roots.isEmpty()) {
+                return null; // no processes available
             }
-            Question root = rootOpt.get();
-            session.setAttribute(SESSION_KEY_CURRENT_Q, root.getId());
-            return toDTO(root);
+            if (roots.size() == 1) {
+                // auto-select the only available process
+                Question root = roots.get(0);
+                session.setAttribute(SESSION_KEY_CURRENT_Q, root.getId());
+                return toDTO(root);
+            }
+            // multiple processes available; let the client choose a process first
+            return null;
         }
         return questionRepository.findById(currentId).map(this::toDTO).orElse(null);
     }
@@ -91,6 +96,26 @@ public class GraphService {
         answerRecordRepository.deleteBySessionId(sessionId);
         session.removeAttribute(SESSION_KEY_CURRENT_Q);
         session.removeAttribute(SESSION_KEY_HISTORY);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionDTO> listProcesses() {
+        return questionRepository.findByRootTrue().stream()
+                .map(q -> new QuestionDTO(q.getId(), q.getText(), new ArrayList<>()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public QuestionDTO startProcess(long rootId, HttpSession session) {
+        Optional<Question> qOpt = questionRepository.findById(rootId);
+        if (!qOpt.isPresent() || !qOpt.get().isRoot()) {
+            return null;
+        }
+        // reset previous progress and set new root
+        reset(session);
+        Question root = qOpt.get();
+        session.setAttribute(SESSION_KEY_CURRENT_Q, root.getId());
+        return toDTO(root);
     }
 
     private List<Long> getOrInitHistory(HttpSession session) {
