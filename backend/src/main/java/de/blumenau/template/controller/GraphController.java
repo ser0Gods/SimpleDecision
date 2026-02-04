@@ -2,6 +2,7 @@ package de.blumenau.template.controller;
 
 import de.blumenau.template.dto.AnswerDTO;
 import de.blumenau.template.dto.QuestionDTO;
+import de.blumenau.template.dto.ProcessDTO;
 import de.blumenau.template.service.GraphService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,29 +25,29 @@ public class GraphController {
     }
 
     @GetMapping("/current")
-    @Operation(summary = "Get current question", description = "Returns the current question with possible answers for the caller's session")
-    public ResponseEntity<QuestionDTO> current(HttpSession session) {
-        QuestionDTO dto = graphService.getCurrentQuestion(session);
+    @Operation(summary = "Get current questions", description = "Returns the current active questions with possible answers for the caller's session. Returns null if no process selected and more than one exists.")
+    public ResponseEntity<java.util.List<QuestionDTO>> current(HttpSession session) {
+        java.util.List<QuestionDTO> dto = graphService.getCurrentQuestions(session);
         return ResponseEntity.ok(dto);
     }
 
     @PostMapping("/answer/{answerId}")
-    @Operation(summary = "Select an answer", description = "Selects an answer and returns the next question if available; null when finished")
-    public ResponseEntity<QuestionDTO> choose(@PathVariable long answerId, HttpSession session) {
-        QuestionDTO dto = graphService.selectAnswer(answerId, session);
+    @Operation(summary = "Select an answer", description = "Selects an answer and returns the updated list of active questions; empty list when finished")
+    public ResponseEntity<java.util.List<QuestionDTO>> choose(@PathVariable long answerId, HttpSession session) {
+        java.util.List<QuestionDTO> dto = graphService.selectAnswer(answerId, session);
         return ResponseEntity.ok(dto);
     }
 
     @GetMapping("/processes")
-    @Operation(summary = "List processes", description = "Returns the list of available processes (root questions)")
-    public ResponseEntity<List<QuestionDTO>> processes() {
+    @Operation(summary = "List processes", description = "Returns the list of available processes to start")
+    public ResponseEntity<List<ProcessDTO>> processes() {
         return ResponseEntity.ok(graphService.listProcesses());
     }
 
-    @PostMapping("/process/{rootId}/start")
-    @Operation(summary = "Start process", description = "Resets the session and starts the selected process (root question)")
-    public ResponseEntity<QuestionDTO> start(@PathVariable long rootId, HttpSession session) {
-        return ResponseEntity.ok(graphService.startProcess(rootId, session));
+    @PostMapping("/process/{processId}/start")
+    @Operation(summary = "Start process", description = "Resets the session and starts the selected process; returns list of starting questions")
+    public ResponseEntity<java.util.List<QuestionDTO>> start(@PathVariable long processId, HttpSession session) {
+        return ResponseEntity.ok(graphService.startProcess(processId, session));
     }
 
     @GetMapping("/history")

@@ -2,8 +2,10 @@ package de.blumenau.template.config;
 
 import de.blumenau.template.domain.Answer;
 import de.blumenau.template.domain.Question;
+import de.blumenau.template.domain.Process;
 import de.blumenau.template.repository.AnswerRepository;
 import de.blumenau.template.repository.QuestionRepository;
+import de.blumenau.template.repository.ProcessRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class DataSeeder {
 
     @Bean
-    CommandLineRunner seedData(QuestionRepository questionRepository, AnswerRepository answerRepository) {
+    CommandLineRunner seedData(QuestionRepository questionRepository, AnswerRepository answerRepository, ProcessRepository processRepository) {
         return args -> {
             if (questionRepository.count() > 0) return;
 
@@ -131,6 +133,12 @@ public class DataSeeder {
             a53.setQuestion(q5);
             a53.setNextQuestion(null);
             answerRepository.save(a53);
+
+            // Create a default process with starting questions
+            Process p = new Process();
+            p.setName("Pet Recommendation");
+            p.getStartingQuestions().add(q1); // start with the root question
+            processRepository.save(p);
         };
     }
 }

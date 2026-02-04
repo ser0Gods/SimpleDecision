@@ -4,10 +4,10 @@ import api from '@/lib/api'
 
 type AnswerDTO = { id: number, text: string }
 type QuestionDTO = { id: number, text: string, answers: AnswerDTO[] }
-type ProcessDTO = { id: number, text: string }
+type ProcessDTO = { id: number, name: string }
 
 const loading = ref(false)
-const current = ref<QuestionDTO | null>(null)
+const current = reactive<QuestionDTO[]>([])
 const history = reactive<AnswerDTO[]>([])
 const processes = reactive<ProcessDTO[]>([])
 const selectingProcess = ref(false)
@@ -16,7 +16,14 @@ async function loadCurrent() {
   loading.value = true
   try {
     const res = await api.get('api/graph/current')
-    current.value = res.data
+    const data = res.data as QuestionDTO[] | null
+    current.splice(0, current.length)
+    if (Array.isArray(data)) {
+      current.push(...data)
+    } else if (data === null) {
+      // no process selected yet (and multiple exist)
+      current.splice(0, current.length)
+    }
   } finally {
     loading.value = false
   }
@@ -31,7 +38,11 @@ async function choose(answerId: number) {
   loading.value = true
   try {
     const res = await api.post(`api/graph/answer/${answerId}`)
-    current.value = res.data // could be null when finished
+    const data = res.data as QuestionDTO[]
+    current.splice(0, current.length)
+    if (Array.isArray(data)) {
+      current.push(...data)
+    }
     await loadHistory()
   } finally {
     loading.value = false
@@ -42,7 +53,7 @@ async function reset() {
   await api.post('api/graph/reset')
   await loadHistory()
   await loadCurrent()
-  if (!current.value) {
+  if (current.length === 0) {
     await loadProcessesAndMaybeStart()
   }
 }
@@ -55,7 +66,7 @@ async function loadProcessesAndMaybeStart() {
     await startProcess(processes[0].id)
   } else if (processes.length > 1) {
     selectingProcess.value = true
-    current.value = null
+    current.splice(0, current.length)
   }
 }
 
@@ -64,7 +75,9 @@ async function startProcess(processId: number) {
   loading.value = true
   try {
     const res = await api.post(`api/graph/process/${processId}/start`)
-    current.value = res.data
+    const data = res.data as QuestionDTO[]
+    current.splice(0, current.length)
+    if (Array.isArray(data)) current.push(...data)
     await loadHistory()
   } finally {
     loading.value = false
@@ -75,7 +88,7 @@ onMounted(async () => {
   await loadHistory()
   // load current question; if null, let processes decide
   await loadCurrent()
-  if (!current.value) {
+  if (current.length === 0) {
     await loadProcessesAndMaybeStart()
   }
 })
@@ -89,13 +102,15 @@ onMounted(async () => {
     <div v-if="selectingProcess">
       <h2>Select a process</h2>
       <div class="answers">
-        <button v-for="p in processes" :key="p.id" class="answer" @click="startProcess(p.id)">{{ p.text }}</button>
+        <button v-for="p in processes" :key="p.id" class="answer" @click="startProcess(p.id)">{{ p.name }}</button>
       </div>
     </div>
-    <div v-if="current">
-      <h2>{{ current.text }}</h2>
-      <div class="answers">
-        <button v-for="a in current.answers" :key="a.id" class="answer" @click="choose(a.id)">{{ a.text }}</button>
+    <div v-if="current.length > 0">
+      <div v-for="q in current" :key="q.id" class="question">
+        <h2>{{ q.text }}</h2>
+        <div class="answers">
+          <button v-for="a in q.answers" :key="a.id" class="answer" @click="choose(a.id)">{{ a.text }}</button>
+        </div>
       </div>
     </div>
     <div v-else>
@@ -116,6 +131,7 @@ onMounted(async () => {
 <style scoped>
 h1 { font-size: 28px; margin-bottom: 10px; }
 h2 { font-size: 22px; }
+.question { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 6px; }
 .answers { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
 .answer { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; background: #fea645; }
 .answer:hover { background: #ffb56b; }
