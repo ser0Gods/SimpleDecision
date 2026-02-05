@@ -215,8 +215,8 @@ public class GraphService {
             dataDir = cwd.resolve("data");
         }
         Files.createDirectories(dataDir);
-        Path pumlPath = dataDir.resolve("test.puml");
-        Path pngPath = dataDir.resolve("test.png");
+        Path pumlPath = dataDir.resolve("Process_"+processId+"_"+sessionId+".puml");
+        Path pngPath = dataDir.resolve("Process_"+processId+"_"+sessionId+".png");
 
         // Write PUML file
         Files.write(pumlPath, puml.getBytes(StandardCharsets.UTF_8));

@@ -5,9 +5,14 @@ import de.blumenau.template.dto.QuestionDTO;
 import de.blumenau.template.dto.ProcessDTO;
 import de.blumenau.template.service.GraphService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,5 +66,38 @@ public class GraphController {
     public ResponseEntity<Void> reset(HttpSession session) {
         graphService.reset(session);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/result.png")
+    @Operation(summary = "Get generated result image", description = "Returns the generated PNG of the finished process for the current session, if available")
+    public ResponseEntity<byte[]> getResultPng(HttpSession session) {
+        Long processId = (Long) session.getAttribute(GraphService.SESSION_KEY_PROCESS);
+        if (processId == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Resolve data folder path similar to GraphService
+        Path cwd = Paths.get("").toAbsolutePath();
+        Path dataDir;
+        if (cwd.getFileName() != null && "backend".equalsIgnoreCase(cwd.getFileName().toString())) {
+            dataDir = cwd.getParent().resolve("data");
+        } else {
+            dataDir = cwd.resolve("data");
+        }
+
+        Path pngPath = dataDir.resolve("Process_" + processId + "_" + session.getId() + ".png");
+        try {
+            if (!Files.exists(pngPath)) {
+                return ResponseEntity.notFound().build();
+            }
+            byte[] bytes = Files.readAllBytes(pngPath);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + pngPath.getFileName().toString() + "\"")
+                    .contentType(MediaType.IMAGE_PNG)
+                    .contentLength(bytes.length)
+                    .body(bytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

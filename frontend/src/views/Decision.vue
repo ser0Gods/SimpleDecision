@@ -11,6 +11,20 @@ const current = reactive<QuestionDTO[]>([])
 const history = reactive<AnswerDTO[]>([])
 const processes = reactive<ProcessDTO[]>([])
 const selectingProcess = ref(false)
+const resultImgUrl = ref<string | null>(null)
+
+function refreshResultImage() {
+  // Show result image only when a process is selected and there are no current questions
+  if (!selectingProcess.value && current.length === 0) {
+    // Cache-bust with timestamp so a new image shows after each run
+    const ts = Date.now()
+    // Use the same axios baseURL to ensure correct origin and send cookies for session
+    const base = (api.defaults && (api.defaults as any).baseURL) || ''
+    resultImgUrl.value = `${base}api/graph/result.png?ts=${ts}`
+  } else {
+    resultImgUrl.value = null
+  }
+}
 
 async function loadCurrent() {
   loading.value = true
@@ -24,6 +38,7 @@ async function loadCurrent() {
       // no process selected yet (and multiple exist)
       current.splice(0, current.length)
     }
+    refreshResultImage()
   } finally {
     loading.value = false
   }
@@ -44,6 +59,7 @@ async function choose(answerId: number) {
       current.push(...data)
     }
     await loadHistory()
+    refreshResultImage()
   } finally {
     loading.value = false
   }
@@ -56,6 +72,7 @@ async function reset() {
   if (current.length === 0) {
     await loadProcessesAndMaybeStart()
   }
+  refreshResultImage()
 }
 
 async function loadProcessesAndMaybeStart() {
@@ -68,6 +85,7 @@ async function loadProcessesAndMaybeStart() {
     selectingProcess.value = true
     current.splice(0, current.length)
   }
+  refreshResultImage()
 }
 
 async function startProcess(processId: number) {
@@ -79,6 +97,7 @@ async function startProcess(processId: number) {
     current.splice(0, current.length)
     if (Array.isArray(data)) current.push(...data)
     await loadHistory()
+    refreshResultImage()
   } finally {
     loading.value = false
   }
@@ -91,6 +110,7 @@ onMounted(async () => {
   if (current.length === 0) {
     await loadProcessesAndMaybeStart()
   }
+  refreshResultImage()
 })
 </script>
 
@@ -115,14 +135,10 @@ onMounted(async () => {
     </div>
     <div v-else>
       <p v-if="!selectingProcess">No further questions. You reached the end of the process.</p>
-    </div>
-
-    <div class="history">
-      <h3>Your Answers (session)</h3>
-      <ul>
-        <li v-for="(a, idx) in history" :key="idx">{{ a.text }}</li>
-      </ul>
-      <button class="reset" @click="reset">Reset</button>
+      <div v-if="resultImgUrl" class="result">
+        <h3>Result Diagram</h3>
+        <img :src="resultImgUrl" alt="Process result" style="max-width: 100%; border: 1px solid #ddd; border-radius: 6px;" />
+      </div>
     </div>
   </main>
   
@@ -137,4 +153,5 @@ h2 { font-size: 22px; }
 .answer:hover { background: #ffb56b; }
 .history { margin-top: 20px; }
 .reset { margin-top: 10px; padding: 6px 10px; }
+.result { margin-top: 20px; }
 </style>
