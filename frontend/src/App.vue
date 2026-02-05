@@ -22,6 +22,7 @@ const navBarHeight = computed(() => {
   <div id="nav" ref="navBar">
     <router-link to="/">Willkommen</router-link>
     <router-link to="/create">Create Question</router-link>
+    <router-link to="/admin/questions">Edit Questions</router-link>
   </div>
   <div class="content-container">
     <div class="content-wrapper">

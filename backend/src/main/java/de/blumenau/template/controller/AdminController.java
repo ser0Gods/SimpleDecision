@@ -58,6 +58,25 @@ public class AdminController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @GetMapping("/questions/{id}/details")
+    @Operation(summary = "Get a question with answers", description = "Returns a question including its answers and next-question linkage for editing")
+    public ResponseEntity<AdminQuestionDetailDTO> getQuestionDetails(@PathVariable Long id) {
+        return questionRepository.findById(id)
+                .map(q -> {
+                    List<AdminAnswerDTO> answers = q.getAnswers().stream()
+                            .map(a -> new AdminAnswerDTO(
+                                    a.getId(),
+                                    a.getText(),
+                                    q.getId(),
+                                    a.getNextQuestion() != null ? a.getNextQuestion().getId() : null
+                            ))
+                            .collect(Collectors.toList());
+                    return new AdminQuestionDetailDTO(q.getId(), q.getText(), answers);
+                })
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
     @PostMapping("/questions")
     @Operation(summary = "Create a question", description = "Creates a new question. Optionally mark it as root.")
     public ResponseEntity<QuestionDTO> createQuestion(@RequestBody CreateQuestionRequest req) {
