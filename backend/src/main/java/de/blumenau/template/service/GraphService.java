@@ -233,7 +233,7 @@ public class GraphService {
         StringBuilder sb = new StringBuilder();
         sb.append("@startuml\n");
         sb.append("(Start) as start\n");
-        sb.append("(End) as end\n");
+        sb.append("(End) as ende\n");
 
         // Load selected answers for this session
         List<AnswerRecord> records = answerRecordRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
@@ -285,7 +285,7 @@ public class GraphService {
             String label = escape(a.getText());
             Question next = a.getNextQuestion();
             if (next == null) {
-                sb.append(q.getId()).append(" --> end : ").append(label).append("\n");
+                sb.append(q.getId()).append(" --> ende : ").append(label).append("\n");
             } else {
                 sb.append(q.getId()).append(" --> ").append(next.getId()).append(" : ").append(label).append("\n");
             }
